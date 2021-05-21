@@ -1,0 +1,19 @@
+{
+  "name": "schedule",
+  "version": "1.0.0",
+  "description": "",
+  "main": "schedule.js",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "helpers": "file:../../HelperModule",
+    "mysql": "^2.18.1",
+    "securechannel": "file:../../SecureChannel"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bruce Ellsworth",
+  "license": "ISC"
+}

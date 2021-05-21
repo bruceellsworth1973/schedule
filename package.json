@@ -1,0 +1,21 @@
+{
+  "name": "schedulefiles",
+  "version": "1.0.0",
+  "description": "file upload and download agent for meeting schedule",
+  "main": "files.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bruce Ellsworth",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-fileupload": "^1.2.1",
+    "helpers": "file:../HelperModule",
+    "https": "^1.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^7.23.0"
+  }
+}
