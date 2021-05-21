@@ -1,0 +1,13 @@
+[Unit]
+Description=Archive status node.js server
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+User=user
+WorkingDirectory=/var/www/ellsworth.local/schedule/api
+ExecStart=/usr/bin/supervisor schedule.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1, user-scalable=no">
+	<meta name="Expires" content="31 December 1990">
+	<meta http-equiv="cache-control" content="no-cache">
+	<title>LSA&nbsp;Meeting&nbsp;Schedule&nbsp;Manager</title>
+	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+	<link rel="manifest" href="site.webmanifest">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w==" crossorigin="anonymous" />
+	<link rel="stylesheet" href="css/stylesheet.css">
+	<script src="js/md5.js"></script>
+	<script src="js/securechannel.js"></script>
+	<script src="js/scheduleui.js"></script>
+</head>
+<body>
+	<header>
+		<span id="title" class="fullWidth nowrap white textShadow">Meeting Schedule Manager</span>
+		<div class="header flex-container flex-content-space-between flex-items-center">
+			<span id="logo" class="white textShadow"><a href="#screen=meetings&mode=list&id=0"><img class="seal margin" alt="" src="images/sitelogo.png"></a></span>
+			<span style="flex-grow: 4;"></span>
+			<button title="Meetings List Mode" id="homeButton" class="btn btn-transparent fas fa-home large white textShadow switchScreen" data-screen="meetings" data-panel="home" data-mode="list" data-id="0"></button>
+			<button title="Admin Mode" id="adminButton" class="btn btn-transparent fas fa-cog large white textShadow switchScreen" data-screen="admin" data-panel="home" data-mode="undefined" data-id="undefined"></button>
+			<button title="User Menu" id="user" class="btn btn-transparent fas fa-user-circle large white textShadow toggleMenu" data-menu='userMenu'></button>
+			<span id="date-time" class="padSmall nowrap white textShadow"></span>
+		</div>
+	</header>
+	<section id="userMenu" class="hidden">
+		<span class="arrowUp"></span>
+		<div class="backgroundLtGray borderBlack radius padSmall">
+			<p class="userName marginMed"></p>
+			<button class="btn btn-link changePassword">Change Password</button>
+			<button class="btn btn-link logout">Logout</button>
+		</div>
+	</section>
+	<main>
+		<div class="relative fullHeight">
+			<section id="meetings" class="absolute fullSize noflow">
+				<section id="meetingList" class="noflow">
+					<nav>
+						<button title="New Meeting" class="btn btn-primary borderBlack meetingsFocus" data-mode="add">New</button>
+						<button title="Clone Meeting" class="btn btn-secondary borderBlack meetingClone meetingsFocus" data-mode="clone">Clone</button>
+						<button title="Edit Meeting" class="btn btn-secondary borderBlack meetingEdit meetingsFocus" data-mode="edit">Edit</button>&nbsp;
+						<button title="Cancel Meeting" class="btn btn-warning borderBlack cancelMeeting">Cancel</button>&nbsp;
+						<button title="Delete Meeting" class="btn btn-danger borderBlack deleteMeeting">Delete</button>
+						<span class="changedStatus"></span>
+					</nav>
+					<div class="main">
+						<div class="relative">
+							<div class="collapseMenu" title="Filter Meetings"><span id="collapsed" class="fa fa-chevron-down noflow"></span><span id="expanded" class="fa fa-chevron-up"></span></div>
+							<span class="filterMeetings noflowMobile">
+								<label title="Filter Meetings by Title" class="fa fa-search white">&nbsp;
+									<input type="text" class="filterTitle" placeholder="Filter by Title" pattern="[a-zA-Z0-9]*" spellcheck="false" maxlength="40" oninput="triggerAction(this);">
+								</label>
+								<label title="Filter Meetings by Committee">
+									<select class="filterCommittee margin minus-top padMed"></select>
+								</label>
+								<button title="Clear Filter" class="btn btn-secondary borderBlack clearFilter noinlineMobile">Clear Filter</button>
+							</span>
+							<table id="meetingsTable" class="backgroundGray"></table>
+							<table id="meetingsTableMobile" class="backgroundGray"></table>
+						</div>
+					</div>
+				</section>
+				<section id="meetingEdit" class="absolute fullSize noflow">
+					<nav>
+						<button class="btn btn-primary borderBlack meetingSave">Save Changes</button>
+						<button class="btn btn-warning borderBlack meetingCancel">Cancel Changes</button>
+					</nav>
+					<div class="main">
+						<div class="relative fullHeight">
+							<div class="flex-container flex-content-center flex-items-center margin minus-top">
+								<div class="backgroundGray borderBlack radius">
+									<div class="flex-row center radiusTop title"></div>
+									<div class="flex-row center margin" id="publishTime">
+										<span class="inlineBlock widthMed right">Publish Time:</span>&nbsp;
+										<span id="publishTime" class="nowrap">
+											<input type="date" class="marginSmall" disabled="disabled">
+											<input type="time" class="marginSmall" disabled="disabled">
+										</span>
+										<button class="btn btn-light marginSmall widthLarge checkButton">Publish Now:&nbsp;<input type="checkbox" class="publishNow" tabindex="-1" onchange="triggerAction(this);" checked></button>
+									</div>
+									<div class="flex-row center margin">
+										<span class="inlineBlock widthMed right">Meeting Time:</span>&nbsp;
+										<span id="fixedTime" class="nowrap">
+											<input type="date" class="marginSmall required">
+											<input type="time" class="marginSmall required">
+										</span>
+										<span id="customTime" class="noflow">
+											<input type="text" class="marginSmall displaytime" style="width: 293.7px;">
+										</span>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Custom Time:&nbsp;<input type="checkbox" class="customTime" tabindex="-1" onchange="triggerAction(this);"></button>
+									</div>
+									<div class="flex-row left margin">
+										<p>
+											<label>Chamber:&nbsp;
+												<select class="selectChamber required">
+													<option value="0">Select...</option>
+													<option value="H">House</option>
+													<option value="S">Senate</option>
+													<option value="J">Joint</option>
+												</select>
+											</label>
+										</p>
+										<span class="houseCommittee noflow"><p><label>House Committee:&nbsp;<select class="houseCommittee margin"></select></label></p></span>
+										<span class="senateCommittee noflow"><p><label>Senate Committee:&nbsp;<select class="senateCommittee margin"></select></label></p></span>
+									</div>
+									<div class="flex-row left margin">
+										<p><label>Location:&nbsp;<input type="text" class="location required fullWidth"></label></p>
+										<p><label>Meeting Title:&nbsp;<input type="text" class="committeeName required fullWidth" required></label></p>
+										<p><label>Bill List:<input type="text" class="billList fullWidth"></label></p>
+										<p class="small">Special requests can only be seen by support staff.</p>
+										<label>Special Requests:&nbsp;<textarea class="specialRequests fullWidth"></textarea></label>
+									</div>
+									<div class="flex-row center margin">
+										<span class="small">Please only use the notification if you want an update pushed to everyone following this meeting.</span>
+									</div>
+									<div class="flex-row mobileRight margin">
+										<span class="nowrap"><label>Notification:&nbsp;<input type="text" class="notation marginSmall tweet"></label>&nbsp;&nbsp;</span>
+										<span class="nowrap"><label>Phone:&nbsp;<input type="phone" class="contact marginSmall"></label>&nbsp;&nbsp;</span>
+									</div>
+									<div class="flex-row center margin">
+										<button class="btn btn-light marginSmall checkButton">Public:&nbsp;<input type="checkbox" class="public" tabindex="-1" checked></button>
+										<button class="btn btn-light marginSmall checkButton">Broadcast:&nbsp;<input type="checkbox" class="broadcast" tabindex="-1"></button>
+										<button class="btn btn-light marginSmall checkButton">Canceled:&nbsp;<input type="checkbox" class="canceled" tabindex="-1"></button>
+									</div>
+									<div class="dropzone">
+										<h3>&raquo; Drop New Attachment Here &laquo;</h3>
+										<label id="attachButton" class="button btn btn-secondary"><span>Replace Attachment</span><input type="file" accept="application/pdf" multiple onchange="handleFiles(this.files);" class="noflow"></label>
+										<progress class="upload noflow" max=100 value=0></progress>
+										<p class="fileDetails noflow"></p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+			</section>
+			<section id="admin" class="absolute fullSize noflow">
+				<section id="home" class="absolute fullSize">
+					<div class="flex-container flex-content-center flex-items-center fullHeight">
+						<div class="backgroundGray borderBlack radius">
+							<div class="flex-row center radiusTop title">Admistration</div>
+							<div id="usersButton" class="flex-row center margin">
+								<button class="btn btn-primary borderBlack widthLarge adminFocus" data-panel="users" data-mode="list" data-id="0">Users</button>
+							</div>
+							<div id="groupsButton" class="flex-row center margin">
+								<button class="btn btn-primary borderBlack widthLarge adminFocus" data-panel="groups" data-mode="list" data-id="0">Groups</button>
+							</div>
+							<div id="committeesButton" class="flex-row center margin">
+								<button class="btn btn-primary borderBlack widthLarge adminFocus" data-panel="committees" data-mode="list" data-id="0">Committees</button>
+							</div>
+							<div id="settingsButton" class="flex-row center margin">
+								<button class="btn btn-primary borderBlack widthLarge adminFocus" data-panel="settings" data-mode="list" data-id="0">Settings</button>
+							</div>
+							<div id="reportsButton" class="flex-row center margin noflowMobile">
+								<button class="btn btn-primary borderBlack widthLarge adminFocus" data-panel="reports" data-mode="list" data-id="0">Reports</button>
+							</div>
+						</div>
+					</div>
+				</section>
+				<section id="groupList" class="noflow">
+					<nav>
+						<button title="New Group" class="btn btn-primary borderBlack adminFocus" data-mode="add">New</button>
+						<button title="Clone Group" class="btn btn-secondary borderBlack groupClone adminFocus" data-mode="clone">Clone</button>
+						<button title="Edit Group" class="btn btn-secondary borderBlack groupEdit adminFocus" data-mode="edit">Edit</button>
+						<button title="Delete Group" class="btn btn-danger borderBlack deleteGroup">Delete</button>
+						<span class="changedStatus"></span>
+					</nav>
+					<div class="main">
+						<div class="relative">
+							<table id="groupsTable" class="backgroundGray"></table>
+						</div>
+					</div>
+				</section>
+				<section id="groupEdit" class="absolute fullSize noflow">
+					<div class="marginMed center">
+						<button class="btn btn-primary borderBlack groupSave">Save Changes</button>
+						<button class="btn btn-warning borderBlack groupCancel">Cancel Changes</button>
+					</div>
+					<div class="main">
+						<div class="relative fullHeight">
+							<div class="flex-container flex-content-center flex-items-center margin minus-top">
+								<div class="backgroundGray borderBlack radius" style="max-width: 676px;">
+									<div class="flex-row center radiusTop title" style="position: sticky; top: 0;"></div>
+									<div class="flex-row center margin">
+										<label>Group Name:&nbsp;<input type="text" class="groupName widthHalf marginSmall required"></label>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Group Enabled:&nbsp;<input type="checkbox" class="enabled" tabindex="-1"></button>
+									</div>
+									<div class="flex-row center margin">
+										<p class="left">Committee User Permissions:</p>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Browse Meetings:&nbsp;<input type="checkbox" class="browseMeetings" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Add Meeting:&nbsp;<input type="checkbox" class="addMeeting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Cancel Meeting:&nbsp;<input type="checkbox" class="cancelMeeting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Delete Meeting:&nbsp;<input type="checkbox" class="removeMeeting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Modify Meeting:&nbsp;<input type="checkbox" class="modifyMeeting" tabindex="-1"></button>
+										<p class="left">Global User Permissions:</p>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Browse All Meetings:&nbsp;<input type="checkbox" class="browseAllMeetings" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Add Any Meeting:&nbsp;<input type="checkbox" class="addAnyMeeting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Cancel Any Meeting:&nbsp;<input type="checkbox" class="cancelAnyMeeting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Delete Any Meeting:&nbsp;<input type="checkbox" class="removeAnyMeeting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Modify Any Meeting:&nbsp;<input type="checkbox" class="modifyAnyMeeting" tabindex="-1"></button>
+										<p class="left">Administrative Permissions:</p>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Add User:&nbsp;<input type="checkbox" class="addUser" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Delete User:&nbsp;<input type="checkbox" class="deleteUser" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Modify User:&nbsp;<input type="checkbox" class="modifyUser" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Add Group:&nbsp;<input type="checkbox" class="addGroup" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Delete Group:&nbsp;<input type="checkbox" class="deleteGroup" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Modify Group:&nbsp;<input type="checkbox" class="modifyGroup" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Add Committee:&nbsp;<input type="checkbox" class="addCommittee" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Delete Committee:&nbsp;<input type="checkbox" class="deleteCommittee" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Modify Committee:&nbsp;<input type="checkbox" class="modifyCommittee" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Add Setting:&nbsp;<input type="checkbox" class="addSetting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Delete Setting:&nbsp;<input type="checkbox" class="deleteSetting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Modify Setting:&nbsp;<input type="checkbox" class="modifySetting" tabindex="-1"></button>
+										<button class="btn btn-light widthLarge marginSmall checkButton">Generate Reports:&nbsp;<input type="checkbox" class="generateReports" tabindex="-1"></button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+				<section id="userList" class="noflow">
+					<div class="marginMed center">
+						<button title="New User" class="btn btn-primary borderBlack adminFocus" data-mode="add">New</button>
+						<button title="Edit User" class="btn btn-secondary borderBlack userEdit adminFocus" data-mode="edit">Edit</button>
+						<button title="Delete User" class="btn btn-danger borderBlack deleteUser">Delete</button>
+						<span class="changedStatus"></span>
+					</div>
+					<div class="main">
+						<div class="relative"><table id="usersTable" class="backgroundGray"></table></div>
+					</div>
+				</section>
+				<section id="userEdit" class="absolute fullSize noflow">
+					<nav>
+						<button class="btn btn-primary borderBlack userSave">Save Changes</button>
+						<button class="btn btn-warning borderBlack userCancel">Cancel Changes</button>
+					</nav>
+					<div class="main">
+						<div class="relative fullHeight">
+							<div class="flex-container flex-content-center flex-items-center margin minus-top">
+								<div class="backgroundGray borderBlack radius">
+									<div class="flex-row center radiusTop title"></div>
+									<div class="flex-row left margin">
+										<p><label>First Name:&nbsp;<input type="text" class="firstName required fullWidth"></label></p>
+										<p><label>Last Name:&nbsp;<input type="text" class="lastName required fullWidth"></label></p>
+										<p><label>Login Name:&nbsp;<input type="text" class="loginName required fullWidth"></label></p>
+										<p class="small userNote">Note: Do not change password fields unless you wish to update the saved password.</p>
+										<p><label>Password:&nbsp;<input type="password" class="password1 required fullWidth"></label></p>
+										<p><label>Confirm Password:&nbsp;<input type="password" class="password2 required fullWidth"></label></p>
+									</div>
+									<div class="flex-row left margin">
+										<label>Senate Committee:<select class="senateCommittee margin"></select></label>
+										<br>
+										<label>House Committee:<select class="houseCommittee margin"></select></label>
+									</div>
+									<div class="flex-row center margin">
+										<label>Group Permissions:<select class="group margin"></select></label>
+										<button class="btn btn-light marginSmall checkButton">System Admin:&nbsp;<input type="checkbox" class="admin" tabindex="-1"></button>
+										<button class="btn btn-light marginSmall checkButton">Account enabled:&nbsp;<input type="checkbox" class="enabled" tabindex="-1"></button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+				<section id="committeeList" class="noflow">
+					<div class="marginMed center">
+						<button title="New Committee" class="btn btn-primary borderBlack adminFocus" data-mode="add">New</button>
+						<button title="Edit Committee" class="btn btn-secondary borderBlack committeeEdit adminFocus" data-mode="edit">Edit</button>
+						<button title="Delete Committee" class="btn btn-danger borderBlack deleteCommittee">Delete</button>
+						<span class="changedStatus"></span>
+					</div>
+					<div class="main">
+						<div class="relative"><table id="committeesTable" class="backgroundGray"></table></div>
+					</div>
+				</section>
+				<section id="committeeEdit" class="absolute fullSize noflow">
+					<nav>
+						<button class="btn btn-primary borderBlack committeeSave">Save Changes</button>
+						<button class="btn btn-warning borderBlack committeeCancel">Cancel Changes</button>
+					</nav>
+					<div class="main">
+						<div class="relative fullHeight">
+							<div class="flex-container flex-content-center flex-items-center margin minus-top">
+								<div class="backgroundGray borderBlack radius">
+									<div class="flex-row center radiusTop title"></div>
+									<div class="flex-row left margin">
+										<label>Committee Name:&nbsp;<input type="text" class="committeeName required fullWidth" required></label>
+										<br>
+										<label>Committee Chamber:
+											<select class="committeeChamber margin">
+												<option value="0">Select...</option>
+												<option value="S">Senate</option>
+												<option value="H">House</option>
+											</select>
+										</label>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+				<section id="settingList" class="noflow">
+					<div class="marginMed center">
+						<button title="New Setting" class="btn btn-primary borderBlack adminFocus" data-mode="add">New</button>
+						<button title="Edit Setting" class="btn btn-secondary borderBlack settingEdit adminFocus" data-mode="edit">Edit</button>
+						<button title="Delete Setting" class="btn btn-danger borderBlack deleteSetting">Delete</button>
+						<span class="changedStatus"></span>
+					</div>
+					<div class="main">
+						<div class="relative"><table id="settingsTable" class="backgroundGray"></table></div>
+					</div>
+				</section>
+				<section id="settingEdit" class="absolute fullSize noflow">
+					<nav>
+						<button class="btn btn-primary borderBlack settingSave">Save Changes</button>
+						<button class="btn btn-warning borderBlack settingCancel">Cancel Changes</button>
+					</nav>
+					<div class="main">
+						<div class="relative fullHeight">
+							<div class="flex-container flex-content-center flex-items-center margin minus-top">
+								<div class="backgroundGray borderBlack radius">
+									<div class="flex-row center radiusTop title"></div>
+									<div class="flex-row center margin">
+										<label>Setting Name:&nbsp;<input type="text" class="settingName required fullWidth"></label>
+										<label>Setting Value:&nbsp;<input type="text" class="settingValue required fullWidth"></label>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+				<section id="reportList" class="noflow">
+					<div class="marginMed center">
+						<button title="New Report" class="btn btn-primary borderBlack adminFocus" data-mode="add">New</button>
+						<button title="Edit Report" class="btn btn-secondary borderBlack reportEdit adminFocus" data-mode="edit">Edit</button>
+						<button title="Delete Report" class="btn btn-danger borderBlack deleteReport">Delete</button>
+						<button title="Run Report" class="btn btn-danger borderBlack runReport">Run</button>
+						<span class="changedStatus"></span>
+					</div>
+					<div class="main">
+						<div class="relative"><table id="reportsTable" class="backgroundGray"></table></div>
+					</div>
+				</section>
+				<section id="reportEdit" class="absolute fullSize noflow">
+					<nav>
+						<button class="btn btn-primary borderBlack reportSave">Save Changes</button>
+						<button class="btn btn-warning borderBlack reportCancel">Cancel Changes</button>
+					</nav>
+					<div class="main">
+						<div class="relative fullHeight">
+							<div class="flex-container flex-content-center flex-items-center margin minus-top">
+								<div class="backgroundGray borderBlack radius">
+									<div class="flex-row center radiusTop title"></div>
+									<div class="flex-row left margin">
+										<label>Report Name:&nbsp;<input type="text" class="reportName required fullWidth"></label>
+									</div>
+									<div class="flex-row left margin">
+										<label>Data Source:&nbsp;
+											<select class="dataSource">
+												<option value="none">Select...</option>
+												<option value="activities">User Activity</option>
+												<option value="meetings">Meetings</option>
+											</select>
+										</label>
+									</div>
+									<div class="flex-row left margin">
+										<label>Columns:<br>
+											<span id="columnCriteria"></span>
+											<button id="addColumn" title="Add Column" class="btn btn-transparent large fas fa-plus-circle darkgreen reportCriteria" data-type="columns"></button>
+										</label>
+									</div>
+									<div class="flex-row left margin">
+										<label>Filter By:<br>
+											<span id="filterCriteria"></span>
+											<button id="addFilter" title="Add Filter" class="btn btn-transparent large fas fa-plus-circle darkgreen reportCriteria" data-type="filters"></button>
+										</label>
+									</div>
+									<div class="flex-row left margin">
+										<label>Sort By:<br>
+											<span id="sortCriteria"></span>
+											<button id="addSort" title="Add Sort" class="btn btn-transparent large fas fa-plus-circle darkgreen reportCriteria" data-type="sorts"></button>
+										</label>
+									</div>
+									<div class="flex-row left margin">
+										<label>Limit and Compare:<br>
+											<span id="limitCriteria"></span>
+											<button id="addLimit" title="Add Limit" class="btn btn-transparent large fas fa-plus-circle darkgreen reportCriteria" data-type="limits"></button>
+										</label>
+									</div>
+									<div class="flex-row center margin">
+										<button class="btn btn-light marginSmall checkButton">Private:&nbsp;<input type="checkbox" class="private" tabindex="-1"></button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+				<section id="reportView" class="absolute fullSize noflow">
+					<div class="marginMed center">
+						<button title="Print Report" class="btn btn-secondary borderBlack printReport">Print</button>
+						<button title="Download Report" class="btn btn-secondary borderBlack downloadReport">Download</button>
+						<button title="Close Report" class="btn btn-danger borderBlack closeReport">Close</button>
+						<span class="changedStatus"></span>
+					</div>
+					<div class="main">
+						<div class="flex-row center title"></div>
+						<div class="relative"><table id="report" class="backgroundGray"></table></div>
+					</div>
+				</section>
+			</section>
+			<section id="busy" class="fixed fullSize mask backgroundBlack hidden"></section>
+			<section id="login" class="absolute fullSize hidden">
+				<div class="flex-container flex-content-center flex-items-center fullHeight">
+					<div class="backgroundGray borderBlack radius">
+						<div class="flex-row center radiusTop title">Authenticate User</div>
+						<div class="flex-row center margin hidden error"></div>
+						<div class="flex-row right margin"><label>Username:&nbsp;<input type="text" name="login" spellcheck="false" pattern="[a-zA-Z0-9]+" minlength="4" maxlength="40" required></label></div>
+						<div class="flex-row right margin"><label>Password:&nbsp;<input type="password" name="password" minlength="8" maxlength="40" required></label></div>
+						<div class="flex-row center margin"><button class="btn btn-primary borderBlack login">Login</button></div>
+					</div>
+				</div>
+			</section>
+			<section id="passwordDialog" class="absolute fullSize hidden">
+				<div class="flex-container flex-content-center flex-items-center fullHeight">
+					<div class="backgroundGray borderBlack radius">
+						<div class="flex-row center radiusTop title">Update Password</div>
+						<div class="flex-row center margin hidden error"></div>
+						<div class="flex-row right margin"><label>Username:&nbsp;<input type="text" name="login" spellcheck="false" disabled></label></div>
+						<div class="flex-row right margin"><label>Password:&nbsp;<input type="password" name="password" spellcheck="false" minlength="8" maxlength="40" required></label></div>
+						<div class="flex-row right margin"><label>Confirm:&nbsp;<input type="password" name="confirm" minlength="8" maxlength="40" required></label></div>
+						<div class="flex-row center margin"><button class="btn btn-primary borderBlack passwordSave">Save</button><button class="btn btn-warning borderBlack passwordClose">Cancel</button></div>
+					</div>
+				</div>
+			</section>
+			<section id="dateTimeDialog" class="absolute fullSize hidden">
+				<div class="flex-container flex-content-center flex-items-center fullHeight">
+					<div class="backgroundGray borderBlack radius">
+						<div class="flex-row center radiusTop title">Select Date and Time</div>
+						<div class="flex-row center margin"><input type="date" class="marginSmall"><input type="time" class="marginSmall"></div>
+						<div class="flex-row center margin"><button class="btn btn-primary borderBlack dateTimeSelect">Select</button><button class="btn btn-warning borderBlack dateTimeClose">Cancel</button></div>
+					</div>
+				</div>
+			</section>
+			<section id="addCriteriaDialog" class="absolute fullSize hidden">
+				<div class="flex-container flex-content-center flex-items-center fullHeight">
+					<div class="backgroundGray borderBlack radius">
+						<div class="flex-row center radiusTop title">Add Report Criterion</div>
+						<div class="flex-row center margim"><select class="padSmall selectCriterion"></select></div>
+						<div class="flex-row center margin"><button class="btn btn-primary borderBlack addCriterion">Add</button><button class="btn btn-warning borderBlack dialogClose">Cancel</button></div>
+					</div>
+				</div>
+			</section>
+			<section id="alert" class="fixed fullSize hidden">
+				<div class="flex-container flex-content-center flex-items-center fullHeight">
+					<div class="backgroundGray borderBlack radius">
+						<div class="flex-row center radiusTop title"></div>
+						<div class="flex-row center margin message"></div>
+						<div class="flex-row center margin">
+							<button class="btn btn-primary borderBlack alertClose">Ok</button>
+						</div>
+					</div>
+				</div>
+			</section>
+			<section id="confirm" class="fixed fullSize hidden">
+				<div class="flex-container flex-content-center flex-items-center fullHeight">
+					<div class="backgroundGray borderBlack radius">
+						<div class="flex-row center radiusTop title"></div>
+						<div class="flex-row center margin message"></div>
+						<div class="flex-row center margin">
+							<button class="btn btn-primary borderBlack confirmClose" data-response="ok">Ok</button>
+							<button class="btn btn-warning borderBlack confirmClose" data-response="cancel">Cancel</button>
+						</div>
+					</div>
+				</div>
+			</section>
+			<section id="loading" class="absolute fullSize hidden">
+				<div class="flex-container flex-content-center flex-items-center fullHeight">
+					<div class="backgroundGray borderBlack radius">
+						<div class="flex-row center radiusTop title">System Initializing</div>
+						<div class="flex-row center margin">Waiting for server connection</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</main>
+	<footer>
+		<span>Copyright &#169; 2021 <a href="mailto:bellsw8@wgu.edu">Bruce Ellsworth</a></span>
+		<span id="connection" class="fas fa-circle">
+			<span class="info backgroundGray borderBlack radius padSmall"></span>
+		</span>
+	</footer>
+	<script>
+		// all dynamic assets are loaded, and all default elements are rendered at this point
+		// create a bidirectional communication channel between the user interface
+		// and the backend server over a secure websocket connection
+		const ui = new UI();
+		const {triggerAction, handleFiles} = ui;
+		new Client('wss://ellsworthsolutions.cloud:443/schedule/api/websocket', ui);
+	</script>
+</body>
+</html>
