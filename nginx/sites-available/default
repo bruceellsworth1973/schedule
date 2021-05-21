@@ -1,0 +1,68 @@
+upstream schedule {
+	server localhost:3000;
+	keepalive 100;
+}
+upstream files {
+	server localhost:3001;
+	keepalive 100;
+}
+server {
+	server_name ellsworthsolutions.cloud;
+	root /var/www/ellsworthsolutions.cloud;
+	charset iso-8859-1;
+	client_max_body_size 30G;
+
+	# define our access and error logs for this vhost
+	access_log /var/log/nginx/access.ellsworth.log;
+	error_log /var/log/nginx/error.ellsworth.log;
+
+	# define custom error pages
+#	error_page 400 /error.php?code=400;
+#	error_page 402 /error.php?code=402;
+#	error_page 403 /error.php?code=403;
+#	error_page 404 /error.php?code=404;
+#	error_page 500 /error.php?code=500;
+#	error_page 502 /error.php?code=502;
+#	error_page 503 /error.php?code=503;
+#	error_page 504 /error.php?code=504;
+
+	location = /favicon.ico {
+		access_log off;
+		log_not_found off;
+	}
+	# allow browser to cache static files, and don't flood the log
+	location ~* \.(jpg|jpeg|gif|css|png|js|ico|html|vbs)$ {
+		access_log off;
+		expires 1h;
+	}
+	location /schedule/api/ {
+		proxy_pass https://schedule/;
+		include snippets/wss-proxy.conf;
+	}
+	location /schedule/files/ {
+		proxy_pass https://files/;
+	}
+	# attempt to locate uri
+	location / {
+		try_files $uri $uri.htm $uri.html $uri/ /index.htm;
+		index index.htm index.html;
+	}
+
+
+    listen 443 ssl http2; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/ellsworthsolutions.cloud/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/ellsworthsolutions.cloud/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
+
+server {
+    if ($host = ellsworthsolutions.cloud) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80 default_server;
+    server_name ellsworthsolutions.cloud;
+    return 404; # managed by Certbot
+}
