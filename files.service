@@ -1,12 +1,12 @@
 [Unit]
-Description=Archive status node.js server
+Description=Metting Schedule files listener
 Wants=network-online.target
 After=network.target network-online.target
 
 [Service]
 User=user
-WorkingDirectory=/var/www/ellsworthsolutions.cloud/schedule/api
-ExecStart=/usr/bin/supervisor schedule.js
+WorkingDirectory=/var/www/ellsworthsolutions.cloud/schedule
+ExecStart=/usr/bin/supervisor files.js
 Restart=always
 
 [Install]
