@@ -874,7 +874,7 @@ class Mysql extends IPC
 		const format = column => this.prepare('??', column);
 		const from = table => [this.prepare(' FROM ??', [table])];
 		const allColumns = () => isEmpty(columnCriteria);
-		const columns = () => allColumns() ? 'SELECT *' : columnCriteria.map((values, index) => this.generateColumn(first(index), values));
+		const columns = () => allColumns() ? ['SELECT *'] : columnCriteria.map((values, index) => this.generateColumn(first(index), values));
 		const filters = () => filterCriteria.map((values, index) => this.generateFilter(first(index), values));
 		const sorts = () => sortCriteria.map((values, index) => this.generateSort(first(index), values));
 		const sql = table => [columns, from, filters, sorts].map(generator => generator(table).join('')).join('');
