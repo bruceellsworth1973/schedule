@@ -3,8 +3,10 @@ const DEVICES = {"localhost":{}};
 const DEBUGGING = false;
 const REFRESHINTERVAL = 5;
 const REPOSITORY = '../../repository/';
+const EMPTYDB = '../schedule.sql';
 const {isEqual, isEmpty, isArray, assign, bind, includes, identity, parse, resolve, reject, toSeconds, toHMS, sum, arrayColumn, arrayDifference, mv, iterable, KEYS} = require('helpers');
 const {createConnection:mysql} = require('mysql');
+const {join} = require('path');
 const {IPC} = require('securechannel');
 const NOW = `CONVERT_TZ(NOW(), @@global.time_zone, '+00:00')`;
 const errorLog = (...messages) => DEBUGGING && console.error(...messages);
@@ -988,7 +990,19 @@ class Mysql extends IPC
 			const events = {error:this.error.bind(this)};
 			this.device = devices[node];
 			this.socket = bind(events).to(mysql(options));
-			this.socket.connect(e => e ? this.error(e) : this.flags({connected:true}).poll(this.refresh));
+			this.socket.connect(e => e ? this.error(e) : this.flags({connected:true}));
+			const [{total}] = await this.query("SELECT COUNT(DISTINCT `table_name`) AS total FROM `information_schema`.`columns` WHERE `table_schema` = 'schedule'")
+			// this should only trigger when there are no existing database tables
+			if (isEqual(total, 0))
+			{
+				// generate absolute path from path relative to running process
+				const file = join(__dirname, EMPTYDB);
+				// reference the .sql file using absolute path
+				console.log('Importing empty database');
+				await this.query(`SOURCE ${file}`);
+			}
+			// periodically query the database for changes
+			this.poll(this.refresh);
 			// trigger ready event listener in parent process
 			this.ready();
 		};
