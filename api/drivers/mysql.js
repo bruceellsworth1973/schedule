@@ -10,7 +10,7 @@ const {join} = require('path');
 const {IPC} = require('securechannel');
 const NOW = `CONVERT_TZ(NOW(), @@global.time_zone, '+00:00')`;
 const errorLog = (...messages) => DEBUGGING && console.error(...messages);
-class Mysql extends IPC
+class MySQL extends IPC
 {
 	prepare(sql, values)
 	{
@@ -1019,4 +1019,4 @@ class Mysql extends IPC
 		this.connect(init);
 	}
 }
-new Mysql(CONNECTION(), DEVICES, REFRESHINTERVAL);
+new MySQL(CONNECTION(), DEVICES, REFRESHINTERVAL);
