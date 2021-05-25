@@ -212,6 +212,41 @@ class MySQL extends IPC
 		const recallSession = () => this.recallSession(session_id, true);
 		return await commit().then(refresh).then(recallSession);
 	}
+	async lockRecord(sessionid, {table_name, primary_key, key_value}, lock = false)
+	{
+		// this method only checks that the calling session is logged in
+		// this could be exploited by a malicious client, but not in any destructive manner
+		// all precautions are taken to circumvent SQL code injection and malformed queries
+		const test = () => true;
+		await this.authorizeAccess(sessionid, test);
+		const recordLocks = 'record_locks', lockTime = 'lock_time';
+		let sql = this.prepare('SELECT * FROM ?? WHERE ?? = ?', [table_name, primary_key, key_value]);
+		const rows = await this.query(sql);
+		// prevent locking on non-existent records
+		if (rows.length === 0) {return `no records match query: ${table_name}, ${primary_key}, ${key_value}`;}
+		// should be an impossible result
+		if (rows.length > 1) {throw `attempt to ${lock ? 'lock' : 'unlock'} multiple records canceled`;}
+		// the record_locks table has a unique key on (table_name, primary_key, key_value)
+		// a manual check is necessary to prevent modification of an existing record owned by another session
+		sql = this.prepare('SELECT * FROM ?? WHERE ? AND ? AND ?', [recordLocks, {table_name}, {primary_key}, {key_value}]);
+		const locks = await this.query(sql);
+		if (isEqual(locks.length, 1))
+		{
+			const [{lock_id, session_id}] = locks;
+			if (session_id !== sessionid) {throw 'record locked by another user session';}
+			sql = lock
+				// an existing lock owned by the current session already exists
+				? this.prepare('UPDATE ?? SET ?? = NOW()', [recordLocks, lockTime])
+				// or an existing lock exists, and the session wants to release it
+				: this.prepare('DELETE FROM ?? WHERE ?', [recordLocks, {lock_id}]);
+		}
+		else if (lock)
+		{
+			// a new lock record needs to be created
+			sql = this.prepare('INSERT INTO ?? SET ?', [recordLocks, {session_id:sessionid, table_name, primary_key, key_value}]);
+		}
+		await this.query(sql);
+	}
 	async getLegislativeSessions(sessionid)
 	{
 		const test = () => true;
@@ -452,6 +487,22 @@ class MySQL extends IPC
 		const rows = await this.query(sql, [column, table]);
 		return arrayColumn(rows, 'permission_id');
 	}
+	async deletePermissions({group_id})
+	{
+		const table = 'group_access';
+		const sql = this.prepare('DELETE FROM ?? WHERE ?', [table, {group_id}]);
+		return await this.query(sql);
+	}
+	async updatePermissions(values, {group_id})
+	{
+		await this.deletePermissions({group_id});
+		const columns = ['group_id', 'permission_id'];
+		const table = 'group_access';
+		const sql = this.prepare('INSERT INTO ?? (??) VALUES ?', [table, columns, values]);
+		const commit = () => this.query(sql);
+		const refresh = ({affectedRows}) => affectedRows && this.updateStatus(table);
+		return await commit().then(refresh);
+	}
 	async getGroups(sessionid, criteria = {group_id:{val:0}})
 	{
 		const {group_id} = criteria;
@@ -474,22 +525,6 @@ class MySQL extends IPC
 		const sql = this.prepare('DELETE FROM ?? WHERE ?', [table, {group_id}]);
 		const commit = () => this.query(sql);
 		const refresh = ({affectedRows}) => affectedRows && this.logActivity(userid, table, `delete group ${group_id}`);
-		return await commit().then(refresh);
-	}
-	async deletePermissions({group_id})
-	{
-		const table = 'group_access';
-		const sql = this.prepare('DELETE FROM ?? WHERE ?', [table, {group_id}]);
-		return await this.query(sql);
-	}
-	async updatePermissions(values, {group_id})
-	{
-		await this.deletePermissions({group_id});
-		const columns = ['group_id', 'permission_id'];
-		const table = 'group_access';
-		const sql = this.prepare('INSERT INTO ?? (??) VALUES ?', [table, columns, values]);
-		const commit = () => this.query(sql);
-		const refresh = ({affectedRows}) => affectedRows && this.updateStatus(table);
 		return await commit().then(refresh);
 	}
 	async updateGroup(sessionid, values = {}, criteria = {})
@@ -767,41 +802,6 @@ class MySQL extends IPC
 		];
 		await Promise.all(saves);
 	}
-	async lockRecord(sessionid, {table_name, primary_key, key_value}, lock = false)
-	{
-		// this method only checks that the calling session is logged in
-		// this could be exploited by a malicious client, but not in any destructive manner
-		// all precautions are taken to circumvent SQL code injection and malformed queries
-		const test = () => true;
-		await this.authorizeAccess(sessionid, test);
-		const recordLocks = 'record_locks', lockTime = 'lock_time';
-		let sql = this.prepare('SELECT * FROM ?? WHERE ?? = ?', [table_name, primary_key, key_value]);
-		const rows = await this.query(sql);
-		// prevent locking on non-existent records
-		if (rows.length === 0) {return `no records match query: ${table_name}, ${primary_key}, ${key_value}`;}
-		// should be an impossible result
-		if (rows.length > 1) {throw `attempt to ${lock ? 'lock' : 'unlock'} multiple records canceled`;}
-		// the record_locks table has a unique key on (table_name, primary_key, key_value)
-		// a manual check is necessary to prevent modification of an existing record owned by another session
-		sql = this.prepare('SELECT * FROM ?? WHERE ? AND ? AND ?', [recordLocks, {table_name}, {primary_key}, {key_value}]);
-		const locks = await this.query(sql);
-		if (isEqual(locks.length, 1))
-		{
-			const [{lock_id, session_id}] = locks;
-			if (session_id !== sessionid) {throw 'record locked by another user session';}
-			sql = lock
-				// an existing lock owned by the current session already exists
-				? this.prepare('UPDATE ?? SET ?? = NOW()', [recordLocks, lockTime])
-				// or an existing lock exists, and the session wants to release it
-				: this.prepare('DELETE FROM ?? WHERE ?', [recordLocks, {lock_id}]);
-		}
-		else if (lock)
-		{
-			// a new lock record needs to be created
-			sql = this.prepare('INSERT INTO ?? SET ?', [recordLocks, {session_id:sessionid, table_name, primary_key, key_value}]);
-		}
-		await this.query(sql);
-	}
 	getFilter(criterion, operator, column, value)
 	{
 		const unpack = packed => {
@@ -927,12 +927,6 @@ class MySQL extends IPC
 		console.log(sql);
 		return await this.query(sql);
 	}
-	end()
-	{
-		// close underlying socket
-		this.socket.end();
-		this.log('exiting gracefully');
-	}
 	request({command, sql, values, sessionid, username, password, criteria})
 	{
 		// this method is called from the parent process through the IPC mechanism
@@ -980,6 +974,12 @@ class MySQL extends IPC
 		// this statement presumes that all commands return promises
 		return command && commands[command] ? commands[command]().catch(exception) : reject('unknown command: '+command);
 	}
+	end()
+	{
+		// close underlying socket
+		this.socket.end();
+		this.log('exiting gracefully');
+	}
 	constructor(options, devices, interval)
 	{
 		super(devices);
@@ -991,9 +991,16 @@ class MySQL extends IPC
 			this.device = devices[node];
 			this.socket = bind(events).to(mysql(options));
 			this.socket.connect(e => e ? this.error(e) : this.flags({connected:true}));
-			const [{total}] = await this.query("SELECT COUNT(DISTINCT `table_name`) AS total FROM `information_schema`.`columns` WHERE `table_schema` = 'schedule'")
+			const schema = 'information_schema';
+			const table = 'columns';
+			const column = 'table_name';
+			const alias = 'total';
+			const criteria = {table_schema:'schedule'};
+			const values = [column, alias, schema, table, criteria];
+			const sql = this.prepare('SELECT COUNT(DISTINCT ??) AS ?? FROM ??.?? WHERE ?', values);
+			const [{total}] = await this.query(sql);
 			// this should only trigger when there are no existing database tables
-			if (isEqual(total, 0))
+			if (isEqual(total, '0'))
 			{
 				// generate absolute path from path relative to running process
 				const file = join(__dirname, EMPTYDB);
