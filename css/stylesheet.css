@@ -733,6 +733,9 @@ li.inactive {
 	main {
 		margin-top: 121px;
 	}
+	#busy {
+		margin-top:121px;
+	}
 }
 @media only screen and (max-width: 1000px) {
 		textarea {
@@ -759,9 +762,6 @@ li.inactive {
 	}
 	.mobileRight {
 		text-align: right;
-	}
-	#busy {
-		margin-top:121px;
 	}
 }
 @media print {
